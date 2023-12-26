@@ -1,0 +1,52 @@
+Symptoms
+    Learning very sensitive to LR
+    With higher batch size it'll get NaN values
+    Reward agent receives keep getting worse
+    even thoguh simple task
+
+Components
+    Reward Baseline
+    Training Step
+    Get Traject Gradients
+    Loss Reinforce
+    Reward visualization
+
+Tests
+    Make sure rewards printed make sense
+    Numerical Stability of Logs
+    Is the agent exploring
+    Does the loss function make sense
+    Does get_baseline make sense
+
+Baseline function [X]
+    Given a constant positive value c, 
+    and array of times ts
+	G_0 = sum(c * gamma^ts)  
+
+Numericar Instability
+Find the NaN	
+    logs
+    softmaxes
+    choice
+    exp
+
+Big Dip
+And seeding completely changes what we do
+    Baselining
+    Weight initilization
+	CAS: gaussian with scale=1e-2
+	eqx: uniform( -1/sqrt(in), 1/sqrt)(in))
+
+
+    Symptoms
+	Seed = 99, lr = 5e-3
+	    Dips doesn't converge
+	Seed = 99, lr = 5e-3. with baselining
+	    Doesn't dip converges
+	Seed = 99 lr = 1e-3
+	    Doesn't dip converges slowly
+	    
+	Seed = 101, lr = 5e-3
+	    Dips but still converges to -200
+	    
+Check whether eqx.is_inexact_array or eqx.is_array matters
