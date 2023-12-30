@@ -52,101 +52,46 @@ Methods
     Learning Rules Policy
 	We use the REINFORCE algorithm to update the policy gradients. The current policy of the agent is used to generate samples during rollout. The direction of the gradient is determined by the return. 
 	[Insert Function] 
+	[Insert Hyperparameters]
+	[Insert Optimizers]
 
-    Run policy on real environment
-	Pick 10_000 as arbritary
+    Neural ODEs for Dynamics
+	The NeuralODE is essentially just a differential equation solver where the function being solved is a multi layer peceptron. The MLP is has a depth of 3 with a width of 22 and uses softplus activation functions. Training the model essentially solves giving it the inital state along with a control signal and seeing how well it learns. You specify the time over which you want the model to solve. Rollout is done by solving for only one timestep, seeing how the agent acts and then using that input for the next step. Importantly the real environment both has a state, and a observation. The ODE exclusively models the observations.
 
-    Training ODE
-	Run untrained policy to get data
-	[What are hyper parameters and why]
+    Learning Rules Dynamics Model
+	Gradients are updated by taking the Mean-Squared Error loss between the outcomes from the real system and the Neural ODE's predicted outcomes. To avoid getting stuck in a local minima we employ only train the model on a first portion of the data until the model converges. We then increase the fraction the model is trained on and append it to the dataset. We do this until the model has been trained on the entire length of the sequences.
 
-	Trained dynamics on this data
+	[Hyper parametrs]
+	[Optimzier]
 
-    Training Policy
-	Wrote REINFORCE from scratch to support Equinox
-	We adapted the policy mostly from Course code
+    Training Policy and ODE in unison
+	Our basic loop consists of initializing a random policy. Generating data by rolling out this policy on the real system. Using this data to train the neural ODE. And then training the policy on the neural ODE so it gets access to more of the obseration space.
 
-	Without baselining learning susceptiblle to local minima and very sensitive to LR. Now will converge to -200 reward in about 2000 epochs.
+    Evaluation Metrics
 
-	
-    Measurable and specific goal
-    Exact description of implementation (math and/or pseudocode, parameter settings)
+Results 
+    Although a pipeline was made to train the policy on the trained ODE, training ended up not succesful due to a bug in the code. Somewhere a NaN value shows up meaning the weights of both the dynamics model and the policy seem to get corrupted. Preventing them from being able to learn. It was not possible to find the cause of this in the limited time. We assume this stems from our code in rollouing out the agent on the ODE.
 
-Results
-    How did training go 
-    Does MPC do better
-	Does this differ based on how bad policy is
+    However we did evaluate the training of the agent on the real environment. Which performed identically to the assignment, implying the code was succesfully reimplemented. Training the Neural ODE on the real environment also manged to reporoduce good results
+
+    [Loss of agent ]
+    [Rolllout agent]
+    
+    [Loss of NODE]
+    [ Dynamics of NODE]
+
+    To evaluate the role of MPC on the pendelum task anyway we evaluate MPC using trained ODE and policy which did not interact with each other
+
+Conclusion
+    
+Discussion
+    Although we were not succesful in implementing MPC using our initial plan. We do see that it is possible to learn the dynamics of the pendelum using a very simple Neural ODE. 
 
 
 
-
-
-Methods
-    You train a NODE
-    You train a policy
-
-    Condition 1:
-	measure ttc ~ recccurence
-	measure ttc ~ n_width 
-	measure ttc ~ n_width * recucrence
-    Condition 2: measure energy ~ recccurence
-	measure energy ~ n_width 
-	measure energy ~ n_width * recucrence
-	
-
-Considerations
-    Different MPC algorithm (greedy etc)
-    We assume no interaction effect between horizon 
-    and batch size
-    We do not consider the optimizatizations JIT and hardware are makig
-    The CPU usage, could have been affected by background processes. Future would want better way to measaure FLOPS
-    We don't consider the affect of pycache and speedus by from stuff already being compiled
 
 Future work
     Hypothesis about hardware and neuroscience algorithms
     Testing hypothesis on neuromorphic hardware
     Given some inspired architecture what algorithm is most appropriate
     Analytical methods to get the optimal rate of recurrence and parallism 
-
-
-Conclusion:
-
-
-Methods:
-
-Results
-    Comparison with baseline (e.g. REINFORCE) 
-    Meaningful and clear figures 
-    Interpretation of the results
-Discussion
-    Reflect on results (positive or negative)
-    Valid conclusions and well- founded claims
-    Suggested future directions and improvements
-
-
-Bin
-    How would you relate this to other work in the field
-
-    MPC is a great way to model this as both the length of trajectory, horizon,  
-    and n trajectories are easily adjusted parameters. 
-
-    We assess both metrics by studying the relation between the parameter and time until agent 
-    converges on the solution.
-
-    Since it's a very simple model we are much more interested in the relationship(exponential, linear) between 
-    ttc and (parallism or recurrence) and less the absolute value 
-
-    An additional constraint we want to add is power usage. 
-    Biological organisms have more finite resources relative to the data centers large models are trained on
-    Meaning any conclusion we pull i
-    From a Marrian perspective, even if the computation of organisms and large models is equal
-    The most suitable algorithm will depend on the implementaiional level, i.e. how the hardware is realized
-
-    And one big difference between organisms nad large model is energy availability
-    In short, models have much more energy available 
-    so an algorithm that works well in models might not work well with organisms 
-    because they don't have enough energy to sustain that algorithm
-
-    although we want actively have our MPC consider time
-    we will measure the "resource utilization" over time to see what the energy  consumptions are
-

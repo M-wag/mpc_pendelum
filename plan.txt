@@ -12,6 +12,8 @@ Mechanics
     [ ] Fix steps_in_episode jitted rollout
     [ ] Train Polciy on ODE
 	[ ] train_step_ode
+	[ ] Get GPus working
+	[ ] Figure out with jax.lax.scan
 
 
 Stats

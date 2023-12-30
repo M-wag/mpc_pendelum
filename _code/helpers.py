@@ -78,7 +78,7 @@ def rollout_parallel(*args):
           rollout,
           in_axes=(0, None, None, None)
         ),
-        static_argnames=( 'model_static', 'env_params', 'steps_in_episode')
+        static_argnames=('model_static', 'env_params', 'steps_in_episode')
     )(*args)
 
 def get_action_inx(action):

@@ -20,7 +20,9 @@ from reinforce import train_step, train_step_ode
 
 jax.config.update("jax_debug_nans", True)
 jax.config.update("jax_debug_infs", True)
-# jax.config.update("jax_disable_jit", True)
+jax.config.update("jax_disable_jit", True)
+
+print(f"Current Back End : {jax.lib.xla_bridge.get_backend().platform}", end='\n\n')
 
 root_file_directory =  os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -73,7 +75,7 @@ def train_policy_on_ode(policy_params, policy_static, dynamics, env_params, key,
     opt_state = optim.init(policy_params)
 
     keys_train = jr.split(key_train, n_runs)
-    (trained_params, _), losses = jax.lax.scan(
+    (trained_params, _, _), losses = jax.lax.scan(
         partial(
             train_step_ode,
             model_static=policy_static,
@@ -82,7 +84,7 @@ def train_policy_on_ode(policy_params, policy_static, dynamics, env_params, key,
             optimizer=optim,
             n_batches=n_batches,
         ),
-        (policy_params, opt_state),
+        (policy_params, opt_state, 0),
         keys_train
     )
 
@@ -118,7 +120,7 @@ def main():
     dynamics = NeuralODE(**dynamics_init_params)
 
     # Loop training params
-    real_env_dataset_size = 10000
+    real_env_dataset_size = 2000
     _, env_params = gymnax.make('Pendulum-v1')
     key_loops = jr.split(key_loop, 5)
 
@@ -136,16 +138,18 @@ def main():
         dynamics_train_data = jnp.concatenate([dynamics_train_data, real_env_data], axis=0)
         # Train dynamics model
         print('Training Dynamics...')
+        print(f'Dynamics Dataset Shape : {dynamics_train_data.shape}')
         old_dynamics_params, old_dynamics_static = eqx.partition(dynamics, eqx.is_inexact_array)
-        _, dynamics_losses, dynamics = train_dynamics(real_env_data, ts, old_dynamics_params, old_dynamics_static, key=key_train_dynamics, 
+        _, dynamics_losses, dynamics = train_dynamics(dynamics_train_data, ts, old_dynamics_params, old_dynamics_static, key=key_train_dynamics, 
                                                     lr_strategy=(3e-3, 3e-3, 3e-3), 
-                                                    steps_strategy=(500, ),
+                                                    steps_strategy=(400, 400, 400),
                                                     length_strategy=(0.10, 0.50, 1.0))
         # Train policy on REAL model 
         print('Training Policy...')
         old_policy_params, old_policy_static = eqx.partition(policy, eqx.is_inexact_array)
         policy_losses, policy = train_policy_on_ode(old_policy_params, old_policy_static, dynamics, env_params, key_train_policy,
-                                                        n_runs=1)
+                                                        n_runs=1000)
+        print
 
         if True:
             check_point = {
@@ -157,7 +161,8 @@ def main():
             }
 
             checkpoint_path = os.path.join(root_file_directory, 'checkpoints', f'{time_start.strftime("%H:%M:%S")}', f'{run}.pkl')
-            if not os.path.exists(checkpoint_path):
+            if not os.path.exists(os.path.dirname(checkpoint_path)):
+
                 os.mkdir(os.path.dirname(checkpoint_path))
 
             with open(checkpoint_path, 'wb') as file:
