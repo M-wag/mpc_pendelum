@@ -1,0 +1,152 @@
+Abstract:
+    We chose explore model predictive control for the pendelum problem. Neural ODE's are used for the dynamics model. 
+
+Intro:
+    Motivation of extension
+	In a recent talk Lecun, outlined his predictions for fturue AI
+	In it he explains how more intelligent AI will consit of more specialized modules
+	One such model is the World Model which the agent can use for logn-term planning 
+	In RL terms, what he refers to is MPC
+
+	From the perspective of Neuroscience, specifically those aiming to utilize Artificial Neural Networks(ANNs)(Neuroconnectionist) Reinforcement Learning is especially interesting. The reason being that it is much more realistic for biological organisms to learn like this relative to supervised learning. An algorithm like model predictive control seems great for modeling planning in the context of cognitive science. 
+	
+	A second motivataion for this extension is further exploration of Neural ODEs. 
+
+
+    Research Quesiton and Hypothesis
+	We aim to study under what circumstancesMPC will be beneficial for the pendelum problem. Specifically, is there a ceiling effect? Is MPC control better when the policy is not as effective.
+	
+
+Methods 
+    Real Environment
+	The task we want our agent to solve in the pendelum problem. We use the dedicated gymnax "Pendelum-v1" environment, with default parameters(Table 1)
+
+	max_speed: float = 8.0
+	max_torque: float = 2.0
+	dt: float = 0.05
+	g: float = 10.0  # gravity
+	m: float = 1.0  # mass
+	l: float = 1.0  # length
+	max_steps_in_episode: int = 200
+
+	The state space consits of a specific angle on a radius circle along with the associated angular velocity.
+
+	The starting position is randomly initialized using the environment defaults. Which initializes the theta between pi and negative pi and an angular velocity between -1 and 1. 
+
+    RL Agent and Policy
+	For the policy we use a fully connected multi layer perceptron with a single hidden layer with 65 neurons and ReLU aciivations and a softmax . The policy takes as input the theta in polar coordinates, cosine and sine respectively and the third input is the theta dot. We apply a softmax to obtain the probality distibution for the actions.
+
+	We restrict the action space to 3 options. Moving left by a set amount, moving right by a set amount or doing nothing.
+
+    Reward Function	
+	At each timestep during the rollout there is an associated reward. We utilize the default from the gymnax environment calculated using:
+
+	angle_normalize(theta) ** 2
+	+ 0.1 * state.theta_dot ** 2
+	+ 0.001 * (u ** 2)
+
+	The actual metric we end up using is the return, which is the cumulative reward the agent expects during each timestep of the rollout. Rewards in the future are usually discounted by some factor so are less influential for the return at that given timestep.
+
+	We apply baseline correction, i.e. removing the mean from all the data. We noticed that some initilizations caused the agent to fall into a local minima and would heavily decrease the rate at which the model converge. After applying baseline correction we notice that all tested initilizations steadily converege to -200 re
+
+    Learning Rules Policy
+	We use the REINFORCE algorithm to update the policy gradients. The current policy of the agent is used to generate samples during rollout. The direction of the gradient is determined by the return. 
+	[Insert Function] 
+
+    Run policy on real environment
+	Pick 10_000 as arbritary
+
+    Training ODE
+	Run untrained policy to get data
+	[What are hyper parameters and why]
+
+	Trained dynamics on this data
+
+    Training Policy
+	Wrote REINFORCE from scratch to support Equinox
+	We adapted the policy mostly from Course code
+
+	Without baselining learning susceptiblle to local minima and very sensitive to LR. Now will converge to -200 reward in about 2000 epochs.
+
+	
+    Measurable and specific goal
+    Exact description of implementation (math and/or pseudocode, parameter settings)
+
+Results
+    How did training go 
+    Does MPC do better
+	Does this differ based on how bad policy is
+
+
+
+
+
+Methods
+    You train a NODE
+    You train a policy
+
+    Condition 1:
+	measure ttc ~ recccurence
+	measure ttc ~ n_width 
+	measure ttc ~ n_width * recucrence
+    Condition 2: measure energy ~ recccurence
+	measure energy ~ n_width 
+	measure energy ~ n_width * recucrence
+	
+
+Considerations
+    Different MPC algorithm (greedy etc)
+    We assume no interaction effect between horizon 
+    and batch size
+    We do not consider the optimizatizations JIT and hardware are makig
+    The CPU usage, could have been affected by background processes. Future would want better way to measaure FLOPS
+    We don't consider the affect of pycache and speedus by from stuff already being compiled
+
+Future work
+    Hypothesis about hardware and neuroscience algorithms
+    Testing hypothesis on neuromorphic hardware
+    Given some inspired architecture what algorithm is most appropriate
+    Analytical methods to get the optimal rate of recurrence and parallism 
+
+
+Conclusion:
+
+
+Methods:
+
+Results
+    Comparison with baseline (e.g. REINFORCE) 
+    Meaningful and clear figures 
+    Interpretation of the results
+Discussion
+    Reflect on results (positive or negative)
+    Valid conclusions and well- founded claims
+    Suggested future directions and improvements
+
+
+Bin
+    How would you relate this to other work in the field
+
+    MPC is a great way to model this as both the length of trajectory, horizon,  
+    and n trajectories are easily adjusted parameters. 
+
+    We assess both metrics by studying the relation between the parameter and time until agent 
+    converges on the solution.
+
+    Since it's a very simple model we are much more interested in the relationship(exponential, linear) between 
+    ttc and (parallism or recurrence) and less the absolute value 
+
+    An additional constraint we want to add is power usage. 
+    Biological organisms have more finite resources relative to the data centers large models are trained on
+    Meaning any conclusion we pull i
+    From a Marrian perspective, even if the computation of organisms and large models is equal
+    The most suitable algorithm will depend on the implementaiional level, i.e. how the hardware is realized
+
+    And one big difference between organisms nad large model is energy availability
+    In short, models have much more energy available 
+    so an algorithm that works well in models might not work well with organisms 
+    because they don't have enough energy to sustain that algorithm
+
+    although we want actively have our MPC consider time
+    we will measure the "resource utilization" over time to see what the energy  consumptions are
+

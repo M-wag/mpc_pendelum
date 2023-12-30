@@ -123,6 +123,77 @@ def visualize_trajectory(policy, env, env_params, key):
     plt.tight_layout()
     plt.show()
 
+
+def get_init_obs(key):
+    high = jnp.array([jnp.pi, 1])
+    init_state = jr.uniform(key, shape=(2,), minval=-high, maxval=high)
+    init_obs = jnp.array([
+        jnp.cos(init_state[0]),
+        jnp.sin(init_state[0]),
+        init_state[1],
+        ])
+    return init_obs
+
+def get_action(obs, key, model):
+    ACTIONS = jnp.array([-1, 0, 1])
+    return jr.choice(key, ACTIONS, p=model(obs))
+
+def get_reward(obs, u):
+    theta = jnp.arctan2(obs[1], obs[0])
+    theta_dot = obs[2]
+    reward = -(
+        angle_normalize(theta) ** 2
+        + 0.1 * theta_dot ** 2
+        + 0.001 * (u ** 2)
+    )
+    reward = reward.squeeze()
+    return reward
+
+def angle_normalize(x: float) -> float:
+    """Normalize the angle - radians."""
+    return ((x + jnp.pi) % (2 * jnp.pi)) - jnp.pi
+
+def rollout_ode(key, model, environment_ode, env_params, steps_in_episode=None):
+    """Rollout a jitted gymnax episode with lax.scan."""
+
+    def policy_step(carry, vars, env_ode, policy, ts):
+        """lax.scan compatible step transition in jax env."""
+        obs = carry
+        
+        key_step, key_net = jr.split(key, 2)
+        action = partial(get_action, model=policy)(obs, key_net)
+        next_obs = env_ode(ts, obs, jnp.expand_dims(action, axis=0))[1, :]
+        reward = get_reward(next_obs, action)
+        carry = next_obs
+        return carry, [obs, action, reward]
+
+    key_reset, rng_episode = jr.split(key, 2)
+    # Init the environment
+    init_obs = get_init_obs(key_reset)
+
+    if steps_in_episode is None:
+        steps_in_episode = env_params.max_steps_in_episode
+
+    # Scan over episode step loop
+    _, scan_out = jax.lax.scan(
+      partial(policy_step, env_ode=environment_ode, policy=model, ts=jnp.array([0, env_params.dt])),
+      init_obs,
+      (),
+      steps_in_episode
+    )
+    
+    obs, action, reward, = scan_out
+    return obs, action, reward
+
+
+def rollout_ode_parallel(*args):
+    return eqx.filter_jit(
+        jax.vmap(
+            rollout_ode,
+            in_axes=(0, None, None, None, None)
+        ),
+    )(*args)
+
 @partial(jax.jit, static_argnums=(2, 3, 4, 5))
 def train_step(carry, key, 
                model_static, env_params, optimizer, n_batches):
@@ -133,6 +204,26 @@ def train_step(carry, key,
     # Forward pass
     keys_rollout = jr.split(key, n_batches)
     obss, actionss, rewardss, _, _= rollout_parallel(keys_rollout, params, model_static, env_params)
+    
+    # Compute gradients
+    delta, _ = loss_REINFORCE(obss, actionss, rewardss, params, model_static)
+    # Update model
+    updates, opt_state = optimizer.update(delta, opt_state, params)
+    new_params = optax.apply_updates(params, updates)
+
+    carry = new_params, opt_state
+    return carry, jnp.mean(jnp.sum(rewardss,axis=-1))
+
+def train_step_ode(carry, key, 
+               model_static, dynamics, env_params, optimizer, n_batches):
+
+    # Unpack last params and optimizer state
+    params, opt_state = carry
+
+    # Forward pass
+    policy = eqx.combine(params, model_static)
+    keys_rollout = jr.split(key, n_batches)
+    obss, actionss, rewardss = rollout_ode_parallel(keys_rollout, policy, dynamics, env_params)
     
     # Compute gradients
     delta, _ = loss_REINFORCE(obss, actionss, rewardss, params, model_static)

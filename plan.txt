@@ -1,0 +1,24 @@
+Mechanics
+    [ ] Rollout ODE
+	[X] How to do singe step diffraax
+	[X] Init state
+	[ ] Compare to real system
+	[ ] Figure out why it only goes right
+	[X] Get reward from obs 
+    [ ] Implemenet MPC
+	[X] Vmap
+	[X] Measure reward
+	[ ] Rollout on real using MPC0
+    [ ] Fix steps_in_episode jitted rollout
+    [ ] Train Polciy on ODE
+	[ ] train_step_ode
+
+
+Stats
+    [ ] Training ODE 
+    [ ] Training Policy
+    [ ] Time ~ Recurrency
+    [ ] Time ~ Parallism
+    [ ] CPU ~ Recurrency
+    [ ] CPU ~ Parallism
+

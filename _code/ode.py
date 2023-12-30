@@ -6,7 +6,6 @@ import optax
 from helpers import dataloader
 import time
 
-
 def train_dynamics(
     ys,
     ts,
@@ -40,8 +39,8 @@ def train_dynamics(
 
     model = eqx.combine(ode_params, ode_static)
 
-    # Notice that up until step 500 we train on only the first 10% of # each time series. 
-    #This is a standard trick to avoid getting caught in a local minimum.
+    # Notice that up until step 500 we train on only the first 10% of each time series. 
+    # This is a standard trick to avoid getting caught in a local minimum.
 
     losses = []
     for lr, steps, length in zip(lr_strategy, steps_strategy, length_strategy):
